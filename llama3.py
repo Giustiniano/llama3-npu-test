@@ -169,9 +169,6 @@ if __name__ == '__main__':
                             break
 
     finally:
-        if benchmark_file is not None:
-            benchmark_file.write("]")
-            benchmark_file.close()
         process = psutil.Process(monitoring_process.pid)
         _ = [p.kill() for p in process.children(recursive=True)]
         process.kill()
