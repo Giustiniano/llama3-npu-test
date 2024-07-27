@@ -1,0 +1,10 @@
+How are you? Please keep your answer short and on point
+Is 2 a prime number? Please keep your answer short and on point
+Is Zaire a country? Please keep your answer short and on point
+Why is the sky blue? Please keep your answer short and on point
+What are the main components of a transformer neural network architecture? Please keep your answer short and on point
+Is Rome a capital city? Please keep your answer short and on point
+Is Singapore a city or a country? Please keep your answer short and on point
+Who was Lee Kuan Yew? Only answer with the most important points
+How can I clean my ultraportable laptop from cat hair?
+What is a Von Neumann probe?
