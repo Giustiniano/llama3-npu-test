@@ -9,6 +9,8 @@ import datetime
 import gc
 import json
 import os.path
+
+import intel_npu_acceleration_library.backend.bindings
 import torch
 from argparse import Namespace
 from pathlib import Path
@@ -86,7 +88,7 @@ def generate(user_prompt, tokenizer_, streamer_, model_):
     btr_start: BatteryReport = BatteryReport.create_battery_report(Path("./battery_report_start.xml"))
     record = {}
     try:
-        print(f"processing prompt {user_prompt}")
+        print(f"\n\nprocessing prompt {user_prompt}\n\n")
         outputs = model_.generate(input_ids, eos_token_id=terminators, do_sample=True, streamer=streamer_, )
         generated_token_array = outputs[0][len(input_ids[0]):]
         generated_tokens = "".join(tokenizer_.batch_decode(generated_token_array, skip_special_tokens=True))
@@ -152,21 +154,20 @@ if __name__ == '__main__':
                 if first_entry:
                     first_entry = False
                 if data_point["generated_tokens"].startswith("Terminated with error"):
-                    print("model does not seem to be responding. Trying to send prompts to see if it restores itself")
-                    tokenizer = AutoTokenizer.from_pretrained("llama3-8B-Instruct.tok",
-                                                              **{"eos_token_id" : 128009})
+                    print("reloading npu library, model, tokenizer and streamer")
+                    intel_npu_acceleration_library.backend.bindings.initialize_bindings()
+                    del model
+                    del tokenizer
+                    del streamer
+                    gc.collect()
+                    model = NPUModelForCausalLM.from_pretrained(model_id, use_cache=True, config=compiler_conf).eval()
+                    tokenizer = AutoTokenizer.from_pretrained(model_id)
                     streamer = TextStreamer(tokenizer, skip_special_tokens=True, skip_prompt=True)
-                    max_attempts = 4
-                    i = 0
-                    for i in range(max_attempts):
-                        test = generate(f"Are you OK {i}?", tokenizer, streamer, model)
-                        if test["generated_tokens"].startswith("Terminated with error"):
-                            print(f"attempt number {i+1} did not work, trying again")
-                            benchmark_file.write(",")
-                            benchmark_file.write(json.dumps({"generated_tokens": f"attempt #{i+1} to restore model", "tokens_count": -1, "tokens_per_second": -1 }) + "\n")
-                        else:
-                            print("model seems to be working, resuming processing of the remaining prompts")
+                    for prompt in ["how are you?", "are you ok", "Is everything ok?", "I think you went out of memory", "how are things?", "do you like ice cream?", "do you prefer pistachio or vanilla?"]:
+                        test = generate(prompt, tokenizer, streamer, model)
+                        if not test["generated_tokens"].startswith("Terminated with error"):
                             break
+
 
     finally:
         process = psutil.Process(monitoring_process.pid)
